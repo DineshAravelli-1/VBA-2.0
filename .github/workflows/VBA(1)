@@ -27,11 +27,11 @@ Sub WriteListToSharePoint()
     ' Loop through the rows and prepare JSON data
     For i = 2 To lastRow ' Assuming the first row is headers
         jsonData = "{"
-        For j = 1 To 80 ' Assuming there are 80 columns
+        For j = 1 To 79 ' Adjust for 79 columns based on your description
             field = ws.Cells(1, j).Value  ' Header names are in the first row
             value = Replace(ws.Cells(i, j).Value, """", "\""")  ' Escape quotes in data
-            jsonData = jsonData & """" & field & """:""" & value & """"
-            If j < 80 Then jsonData = jsonData & ", "
+            jsonData = jsonData & """" & field & """:""" & Replace(value, Chr(10), "\n") & """" ' Handle new lines in data
+            If j < 79 Then jsonData = jsonData & ", "
         Next j
         jsonData = jsonData & "}"
         
@@ -48,6 +48,7 @@ Sub WriteListToSharePoint()
             Debug.Print "Item " & i - 1 & " uploaded successfully!"
         Else
             Debug.Print "Item " & i - 1 & " upload failed. Status: " & objXML.Status & "; Response: " & responseText
+            Debug.Print "JSON Data: " & jsonData ' Print the JSON data for debugging
         End If
     Next i
     
