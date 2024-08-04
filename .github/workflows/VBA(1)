@@ -14,9 +14,16 @@ Sub WriteListToSharePoint()
     
     ' Get the last row with data
     lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    Debug.Print "Last row with data: " & lastRow
     
     ' Get form digest value
     digestValue = GetFormDigest("https://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding")
+    Debug.Print "Form Digest: " & digestValue
+    
+    If digestValue = "" Then
+        Debug.Print "Failed to retrieve form digest."
+        Exit Sub
+    End If
     
     ' Create XMLHTTP object
     Set objXML = New MSXML2.XMLHTTP60
@@ -26,6 +33,7 @@ Sub WriteListToSharePoint()
         jsonData = "{""Title"":""" & ws.Cells(i, 1).Value & """, ""NAME"":""" & ws.Cells(i, 2).Value & """, ""AGE"":" & ws.Cells(i, 3).Value & "}" ' Adjust fields and values accordingly
         
         ' Prepare the HTTP request
+        Debug.Print "Uploading row " & i - 1 & ": " & jsonData
         objXML.Open "POST", SharePointURL, False
         objXML.setRequestHeader "Content-Type", "application/json;odata=verbose"
         objXML.setRequestHeader "Accept", "application/json;odata=verbose"
