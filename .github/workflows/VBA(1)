@@ -11,14 +11,14 @@ Sub WriteListToSharePoint()
     Dim digestValue As String
     
     ' Initialize variables
-    SharePointURL = "https://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding/F_O_Give_Up_agreement/_api/web/lists/getbytitle('example')/items"
+    SharePointURL = "http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding/F_O_Give_Up_agreement/_api/web/lists/getbytitle('Work_Tracker')/items"
     Set ws = ThisWorkbook.Sheets("Sheet1")  ' Ensure this is the correct sheet name
     
     ' Get the last row with data
     lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
     
     ' Get form digest value
-    digestValue = GetFormDigest("https://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding")
+    digestValue = GetFormDigest("http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding")
     
     ' Create XMLHTTP object
     Set objXML = New MSXML2.XMLHTTP60
