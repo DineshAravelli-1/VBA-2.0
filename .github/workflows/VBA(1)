@@ -1,49 +1,46 @@
-Sub UploadToSharePoint()
+Sub WriteListToSharePoint()
     Dim objXML As MSXML2.XMLHTTP60
     Dim SharePointURL As String
-    Dim FilePath As String
-    Dim BinaryStream As Object
-    Dim FileData() As Byte
-    Dim FileName As String
     Dim ListName As String
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim jsonData As String
     Dim Response As String
     
     ' Initialize variables
-    SharePointURL = "https://yoursharepointsite.com/sites/yoursite/yourlibrary/filename.xlsx"
-    FilePath = "C:\path\to\your\file.xlsx"
-    FileName = "file.xlsx"
-    ListName = "Documents"
-
-    ' Create XMLHTTP and ADODB.Stream objects
+    SharePointURL = "https://yoursharepointsite.com/sites/yoursite/_api/web/lists/getbytitle('YourListName')/items"
+    ListName = "YourListName"
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Change to your sheet name
+    
+    ' Get the last row with data
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' Create XMLHTTP object
     Set objXML = New MSXML2.XMLHTTP60
-    Set BinaryStream = CreateObject("ADODB.Stream")
-
-    ' Open the file as a binary stream
-    BinaryStream.Type = 1 ' adTypeBinary
-    BinaryStream.Open
-    BinaryStream.LoadFromFile FilePath
-    FileData = BinaryStream.Read
-    BinaryStream.Close
-
-    ' Prepare the HTTP request
-    objXML.Open "POST", SharePointURL, False
-    objXML.setRequestHeader "Content-Type", "application/octet-stream"
-    objXML.setRequestHeader "Slug", FileName
-    objXML.setRequestHeader "X-RequestDigest", GetFormDigest(SharePointURL)
-    objXML.setRequestHeader "Accept", "application/json;odata=verbose"
-    objXML.send FileData
-
-    ' Check the response
-    If objXML.Status = 200 Then
-        Response = objXML.responseText
-        MsgBox "File uploaded successfully! Response: " & Response
-    Else
-        MsgBox "File upload failed. Status: " & objXML.Status & " Response: " & objXML.responseText
-    End If
-
+    
+    ' Loop through the rows and prepare JSON data
+    For i = 2 To lastRow ' Assuming the first row is headers
+        jsonData = "{'Title':'" & ws.Cells(i, 1).Value & "', 'FieldName1':'" & ws.Cells(i, 2).Value & "', 'FieldName2':'" & ws.Cells(i, 3).Value & "'}" ' Adjust fields and values accordingly
+        
+        ' Prepare the HTTP request
+        objXML.Open "POST", SharePointURL, False
+        objXML.setRequestHeader "Content-Type", "application/json;odata=verbose"
+        objXML.setRequestHeader "Accept", "application/json;odata=verbose"
+        objXML.setRequestHeader "X-RequestDigest", GetFormDigest(SharePointURL)
+        objXML.send jsonData
+        
+        ' Check the response
+        If objXML.Status = 201 Then
+            Response = objXML.responseText
+            Debug.Print "Item " & i - 1 & " uploaded successfully! Response: " & Response
+        Else
+            Debug.Print "Item " & i - 1 & " upload failed. Status: " & objXML.Status & " Response: " & objXML.responseText
+        End If
+    Next i
+    
     ' Clean up
     Set objXML = Nothing
-    Set BinaryStream = Nothing
 End Sub
 
 Function GetFormDigest(SharePointURL As String) As String
