@@ -9,10 +9,11 @@ Sub WriteListToSharePoint()
     Dim field As String
     Dim value As String
     Dim digestValue As String
+    Dim responseText As String
     
     ' Initialize variables
     SharePointURL = "http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding/F_O_Give_Up_agreement/_api/web/lists/getbytitle('Work_Tracker')/items"
-    Set ws = ThisWorkbook.Sheets("Sheet1")  ' Ensure this is the correct sheet name
+    Set ws = ThisWorkbook.Sheets("UploadDat")  ' Ensure this is the correct sheet name
     
     ' Get the last row with data
     lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
@@ -28,7 +29,7 @@ Sub WriteListToSharePoint()
         jsonData = "{"
         For j = 1 To 80 ' Assuming there are 80 columns
             field = ws.Cells(1, j).Value  ' Header names are in the first row
-            value = ws.Cells(i, j).Value
+            value = Replace(ws.Cells(i, j).Value, """", "\""")  ' Escape quotes in data
             jsonData = jsonData & """" & field & """:""" & value & """"
             If j < 80 Then jsonData = jsonData & ", "
         Next j
@@ -42,10 +43,11 @@ Sub WriteListToSharePoint()
         objXML.send jsonData
         
         ' Check the response
+        responseText = objXML.responseText
         If objXML.Status = 201 Then
             Debug.Print "Item " & i - 1 & " uploaded successfully!"
         Else
-            Debug.Print "Item " & i - 1 & " upload failed. Status: " & objXML.Status
+            Debug.Print "Item " & i - 1 & " upload failed. Status: " & objXML.Status & "; Response: " & responseText
         End If
     Next i
     
