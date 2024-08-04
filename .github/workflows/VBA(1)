@@ -2,55 +2,46 @@ Sub WriteListToSharePoint()
     Dim objXML As MSXML2.XMLHTTP60
     Dim SharePointURL As String
     Dim ws As Worksheet
-    Dim lastRow As Long
-    Dim i As Integer
-    Dim j As Integer
     Dim jsonData As String
-    Dim field As String
-    Dim value As String
-    Dim digestValue As String
     Dim responseText As String
-    
+    Dim digestValue As String
+
     ' Initialize variables
     SharePointURL = "http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding/F_O_Give_Up_agreement/_api/web/lists/getbytitle('Work_Tracker')/items"
-    Set ws = ThisWorkbook.Sheets("UploadData")  ' Correct sheet name adjusted
-    
-    ' Get the last row with data
-    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
-    
+    Set ws = ThisWorkbook.Sheets("UploadData")
+
     ' Get form digest value
     digestValue = GetFormDigest("http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding")
-    
+
     ' Create XMLHTTP object
     Set objXML = New MSXML2.XMLHTTP60
-    
-    ' Loop through the rows and prepare JSON data
-    For i = 2 To lastRow ' Assuming the first row is headers
-        jsonData = "{"
-        For j = 1 To 79 ' Assuming there are 79 columns
-            field = ws.Cells(1, j).Value  ' Header names are in the first row
-            value = Replace(ws.Cells(i, j).Value, """", "\""")  ' Escape quotes in data
-            jsonData = jsonData & """" & field & """:""" & value & """"
-            If j < 79 Then jsonData = jsonData & ", "
-        Next j
-        jsonData = jsonData & "}"
-        
-        ' Prepare the HTTP request
-        objXML.Open "POST", SharePointURL, False
-        objXML.setRequestHeader "Content-Type", "application/json;odata=verbose"
-        objXML.setRequestHeader "Accept", "application/json;odata=verbose"
-        objXML.setRequestHeader "X-RequestDigest", digestValue
-        objXML.send jsonData
-        
-        ' Check the response
-        responseText = objXML.responseText
-        If objXML.Status = 201 Then
-            Debug.Print "Item " & i - 1 & " uploaded successfully!"
-        Else
-            Debug.Print "Item " & i - 1 & " upload failed. Status: " & objXML.Status & "; Response: " & responseText
-        End If
-    Next i
-    
+
+    ' Prepare JSON data for a single row, adjust the field names as needed
+    jsonData = "{"
+    jsonData = jsonData & """Upload_Date"":""" & ws.Cells(2, 1).Value & """, "  ' Example field
+    jsonData = jsonData & """Aging"":""" & ws.Cells(2, 2).Value & """"
+    jsonData = jsonData & "}"
+
+    ' Print the JSON data for debugging
+    Debug.Print "JSON Data: " & jsonData
+
+    ' Prepare the HTTP request
+    objXML.Open "POST", SharePointURL, False
+    objXML.setRequestHeader "Content-Type", "application/json;odata=verbose"
+    objXML.setRequestHeader "Accept", "application/json;odata=verbose"
+    objXML.setRequestHeader "X-RequestDigest", digestValue
+    objXML.send jsonData
+
+    ' Check the response
+    responseText = objXML.responseText
+    If objXML.Status = 201 Then
+        Debug.Print "Item uploaded successfully!"
+        MsgBox "Item uploaded successfully!"
+    Else
+        Debug.Print "Upload failed. Status: " & objXML.Status & "; Response: " & responseText
+        MsgBox "Upload failed. Status: " & objXML.Status & "; Response: " & responseText
+    End If
+
     ' Clean up
     Set objXML = Nothing
 End Sub
@@ -59,16 +50,16 @@ Function GetFormDigest(siteURL As String) As String
     Dim objXML As MSXML2.XMLHTTP60
     Dim jsonResponse As Object
     Dim strDigest As String
-    
+
     ' Create XMLHTTP object
     Set objXML = New MSXML2.XMLHTTP60
-    
+
     ' Prepare the HTTP request to get the form digest value
     objXML.Open "POST", siteURL & "/_api/contextinfo", False
     objXML.setRequestHeader "Accept", "application/json;odata=verbose"
     objXML.setRequestHeader "Content-Type", "application/json;odata=verbose"
     objXML.send
-    
+
     ' Check if the response is in JSON format and parse it
     If objXML.Status = 200 Then
         Set jsonResponse = JsonConverter.ParseJson(objXML.responseText)
@@ -77,7 +68,7 @@ Function GetFormDigest(siteURL As String) As String
         MsgBox "Failed to get form digest. Response is not in JSON format. Status: " & objXML.Status
         strDigest = ""
     End If
-    
+
     ' Clean up
     Set objXML = Nothing
     GetFormDigest = strDigest
