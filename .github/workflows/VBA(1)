@@ -16,11 +16,12 @@ Sub WriteListToSharePoint()
     ' Create XMLHTTP object
     Set objXML = New MSXML2.XMLHTTP60
 
-    ' Prepare JSON data for a single row, adjust the field names as needed
-    jsonData = "{"
-    jsonData = jsonData & """Upload_Date"":""" & ws.Cells(2, 1).Value & """, "  ' Example field
-    jsonData = jsonData & """Aging"":""" & ws.Cells(2, 2).Value & """"
-    jsonData = jsonData & "}"
+    ' Prepare JSON data for a single row, including metadata type information
+    jsonData = "{" & _
+               """__metadata"": {""type"": ""SP.Data.Work_TrackerListItem""}," & _
+               """Upload_Date"":""" & ws.Cells(2, 1).Value & """, " & _
+               """Aging"":""" & ws.Cells(2, 2).Value & """ " & _
+               "}"
 
     ' Print the JSON data for debugging
     Debug.Print "JSON Data: " & jsonData
