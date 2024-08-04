@@ -1,66 +1,81 @@
-Sub UploadExcelToSharePoint()
-    Dim xmlHTTP As Object
-    Dim ws As Worksheet
-    Dim lastRow As Long, i As Long
+Sub WriteListToSharePoint()
+    Dim objXML As MSXML2.XMLHTTP60
     Dim SharePointURL As String
-    Dim jsonBody As String
-    Dim formDigest As String
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Integer
+    Dim j As Integer
+    Dim jsonData As String
+    Dim field As String
+    Dim value As String
+    Dim digestValue As String
     
-    Set ws = ThisWorkbook.Sheets("Sheet1")  ' Adjust sheet name as necessary
-    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row  ' Assuming data starts in column A
-    SharePointURL = "http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding/F_O_Give_Up_agreement/_api/web/lists/getbytitle('example')/items"
-
-    ' Retrieve the form digest value
-    formDigest = GetFormDigestValue("http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding")
-
-    ' Check for a valid form digest
-    If formDigest = "" Then
-        MsgBox "Failed to retrieve valid form digest, cannot proceed."
-        Exit Sub
-    End If
-
-    Set xmlHTTP = CreateObject("MSXML2.XMLHTTP.6.0")
-
-    For i = 2 To lastRow
-        jsonBody = "{""__metadata"":{""type"":""SP.Data.ExampleListItem""},""Title"":""" & ws.Cells(i, 1).Value & """,""NAME"":""" & ws.Cells(i, 2).Value & """,""AGE"":" & ws.Cells(i, 3).Value & "}"
-
-        With xmlHTTP
-            .Open "POST", SharePointURL, False
-            .SetRequestHeader "Content-Type", "application/json;odata=verbose"
-            .SetRequestHeader "Accept", "application/json;odata=verbose"
-            .SetRequestHeader "X-RequestDigest", formDigest
-            .Send jsonBody
-            
-            If .Status <> 201 Then
-                MsgBox "Failed to upload data for row " & i & ": " & .Status & " " & .statusText
-            End If
-        End With
+    ' Initialize variables
+    SharePointURL = "https://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding/F_O_Give_Up_agreement/_api/web/lists/getbytitle('example')/items"
+    Set ws = ThisWorkbook.Sheets("Sheet1")  ' Ensure this is the correct sheet name
+    
+    ' Get the last row with data
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' Get form digest value
+    digestValue = GetFormDigest("https://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding")
+    
+    ' Create XMLHTTP object
+    Set objXML = New MSXML2.XMLHTTP60
+    
+    ' Loop through the rows and prepare JSON data
+    For i = 2 To lastRow ' Assuming the first row is headers
+        jsonData = "{"
+        For j = 1 To 80 ' Assuming there are 80 columns
+            field = ws.Cells(1, j).Value  ' Header names are in the first row
+            value = ws.Cells(i, j).Value
+            jsonData = jsonData & """" & field & """:""" & value & """"
+            If j < 80 Then jsonData = jsonData & ", "
+        Next j
+        jsonData = jsonData & "}"
+        
+        ' Prepare the HTTP request
+        objXML.Open "POST", SharePointURL, False
+        objXML.setRequestHeader "Content-Type", "application/json;odata=verbose"
+        objXML.setRequestHeader "Accept", "application/json;odata=verbose"
+        objXML.setRequestHeader "X-RequestDigest", digestValue
+        objXML.send jsonData
+        
+        ' Check the response
+        If objXML.Status = 201 Then
+            Debug.Print "Item " & i - 1 & " uploaded successfully!"
+        Else
+            Debug.Print "Item " & i - 1 & " upload failed. Status: " & objXML.Status
+        End If
     Next i
-
-    MsgBox "Data upload complete."
-    Set xmlHTTP = Nothing
+    
+    ' Clean up
+    Set objXML = Nothing
 End Sub
 
-Function GetFormDigestValue(siteURL As String) As String
-    Dim xmlHTTP As Object
-    Set xmlHTTP = CreateObject("MSXML2.XMLHTTP.6.0")
-    Dim formDigest As String
+Function GetFormDigest(siteURL As String) As String
+    Dim objXML As MSXML2.XMLHTTP60
+    Dim jsonResponse As Object
+    Dim strDigest As String
     
-    With xmlHTTP
-        .Open "POST", siteURL & "/_api/contextinfo", False
-        .SetRequestHeader "Accept", "application/json;odata=verbose"
-        .Send
-        
-        If .Status = 200 Then
-            Dim response As Object
-            Set response = JsonConverter.ParseJson(.responseText)
-            formDigest = response("d")("GetContextWebInformation")("FormDigestValue")
-        Else
-            MsgBox "Failed to get form digest: " & .Status & " " & .statusText
-            formDigest = ""
-        End If
-    End With
+    ' Create XMLHTTP object
+    Set objXML = New MSXML2.XMLHTTP60
     
-    Set xmlHTTP = Nothing
-    GetFormDigestValue = formDigest
+    ' Prepare the HTTP request to get the form digest value
+    objXML.Open "POST", siteURL & "/_api/contextinfo", False
+    objXML.setRequestHeader "Accept", "application/json;odata=verbose"
+    objXML.send ""
+    
+    ' Check if the response is in JSON format
+    If Left(objXML.responseText, 1) = "{" Then
+        Set jsonResponse = JsonConverter.ParseJson(objXML.responseText)
+        strDigest = jsonResponse("d")("GetContextWebInformation")("FormDigestValue")
+    Else
+        MsgBox "Failed to get form digest. Response is not in JSON format. Status: " & objXML.Status
+        strDigest = ""
+    End If
+    
+    ' Clean up
+    Set objXML = Nothing
+    GetFormDigest = strDigest
 End Function
