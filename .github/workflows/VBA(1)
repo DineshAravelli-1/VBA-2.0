@@ -1,0 +1,74 @@
+Sub UploadToSharePoint()
+    Dim objXML As MSXML2.XMLHTTP60
+    Dim SharePointURL As String
+    Dim FilePath As String
+    Dim BinaryStream As Object
+    Dim FileData() As Byte
+    Dim FileName As String
+    Dim ListName As String
+    Dim Response As String
+    
+    ' Initialize variables
+    SharePointURL = "https://yoursharepointsite.com/sites/yoursite/yourlibrary/filename.xlsx"
+    FilePath = "C:\path\to\your\file.xlsx"
+    FileName = "file.xlsx"
+    ListName = "Documents"
+
+    ' Create XMLHTTP and ADODB.Stream objects
+    Set objXML = New MSXML2.XMLHTTP60
+    Set BinaryStream = CreateObject("ADODB.Stream")
+
+    ' Open the file as a binary stream
+    BinaryStream.Type = 1 ' adTypeBinary
+    BinaryStream.Open
+    BinaryStream.LoadFromFile FilePath
+    FileData = BinaryStream.Read
+    BinaryStream.Close
+
+    ' Prepare the HTTP request
+    objXML.Open "POST", SharePointURL, False
+    objXML.setRequestHeader "Content-Type", "application/octet-stream"
+    objXML.setRequestHeader "Slug", FileName
+    objXML.setRequestHeader "X-RequestDigest", GetFormDigest(SharePointURL)
+    objXML.setRequestHeader "Accept", "application/json;odata=verbose"
+    objXML.send FileData
+
+    ' Check the response
+    If objXML.Status = 200 Then
+        Response = objXML.responseText
+        MsgBox "File uploaded successfully! Response: " & Response
+    Else
+        MsgBox "File upload failed. Status: " & objXML.Status & " Response: " & objXML.responseText
+    End If
+
+    ' Clean up
+    Set objXML = Nothing
+    Set BinaryStream = Nothing
+End Sub
+
+Function GetFormDigest(SharePointURL As String) As String
+    Dim objXML As MSXML2.XMLHTTP60
+    Dim strDigest As String
+
+    ' Create XMLHTTP object
+    Set objXML = New MSXML2.XMLHTTP60
+
+    ' Prepare the HTTP request to get the form digest value
+    objXML.Open "POST", SharePointURL & "/_api/contextinfo", False
+    objXML.setRequestHeader "Accept", "application/json;odata=verbose"
+    objXML.send ""
+
+    ' Parse the response to get the form digest value
+    If objXML.Status = 200 Then
+        Dim jsonResponse As Object
+        Set jsonResponse = JsonConverter.ParseJson(objXML.responseText)
+        strDigest = jsonResponse("d")("GetContextWebInformation")("FormDigestValue")
+        GetFormDigest = strDigest
+    Else
+        MsgBox "Failed to get form digest. Status: " & objXML.Status & " Response: " & objXML.responseText
+        GetFormDigest = ""
+    End If
+
+    ' Clean up
+    Set objXML = Nothing
+End Function
