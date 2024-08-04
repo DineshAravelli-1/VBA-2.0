@@ -5,15 +5,16 @@ Sub WriteListToSharePoint()
     Dim lastRow As Long
     Dim i As Integer
     Dim j As Integer
+    Dim part1 As String, part2 As String, part3 As String, part4 As String
     Dim jsonData As String
     Dim field As String
     Dim value As String
     Dim digestValue As String
     Dim responseText As String
-    
+
     ' Initialize variables
     SharePointURL = "http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding/F_O_Give_Up_agreement/_api/web/lists/getbytitle('Work_Tracker')/items"
-    Set ws = ThisWorkbook.Sheets("UploadDat")  ' Ensure this is the correct sheet name
+    Set ws = ThisWorkbook.Sheets("UploadDat")  ' Correct sheet name
     
     ' Get the last row with data
     lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
@@ -26,14 +27,39 @@ Sub WriteListToSharePoint()
     
     ' Loop through the rows and prepare JSON data
     For i = 2 To lastRow ' Assuming the first row is headers
-        jsonData = "{"
-        For j = 1 To 79 ' Adjust for 79 columns based on your description
+        part1 = "{"
+        part2 = ""
+        part3 = ""
+        part4 = ""
+        
+        For j = 1 To 79 ' Assuming there are 79 columns
             field = ws.Cells(1, j).Value  ' Header names are in the first row
             value = Replace(ws.Cells(i, j).Value, """", "\""")  ' Escape quotes in data
-            jsonData = jsonData & """" & field & """:""" & Replace(value, Chr(10), "\n") & """" ' Handle new lines in data
-            If j < 79 Then jsonData = jsonData & ", "
+            Select Case j
+                Case 1 To 20
+                    part1 = part1 & """" & field & """:""" & value & """"
+                Case 21 To 40
+                    part2 = part2 & """" & field & """:""" & value & """"
+                Case 41 To 60
+                    part3 = part3 & """" & field & """:""" & value & """"
+                Case 61 To 79
+                    part4 = part4 & """" & field & """:""" & value & """"
+            End Select
+            If j < 79 Then
+                If j = 20 Or j = 40 Or j = 60 Then
+                    ' Do not add a comma after these parts
+                Else
+                    Select Case j
+                        Case 1 To 19, 21 To 39, 41 To 59
+                            jsonData = jsonData & ", "
+                        Case 20, 40, 60
+                            ' Do not add a comma after these parts
+                    End Select
+                End If
+            End If
         Next j
-        jsonData = jsonData & "}"
+        
+        jsonData = part1 & part2 & part3 & part4 & "}"
         
         ' Prepare the HTTP request
         objXML.Open "POST", SharePointURL, False
@@ -55,30 +81,3 @@ Sub WriteListToSharePoint()
     ' Clean up
     Set objXML = Nothing
 End Sub
-
-Function GetFormDigest(siteURL As String) As String
-    Dim objXML As MSXML2.XMLHTTP60
-    Dim jsonResponse As Object
-    Dim strDigest As String
-    
-    ' Create XMLHTTP object
-    Set objXML = New MSXML2.XMLHTTP60
-    
-    ' Prepare the HTTP request to get the form digest value
-    objXML.Open "POST", siteURL & "/_api/contextinfo", False
-    objXML.setRequestHeader "Accept", "application/json;odata=verbose"
-    objXML.send ""
-    
-    ' Check if the response is in JSON format
-    If Left(objXML.responseText, 1) = "{" Then
-        Set jsonResponse = JsonConverter.ParseJson(objXML.responseText)
-        strDigest = jsonResponse("d")("GetContextWebInformation")("FormDigestValue")
-    Else
-        MsgBox "Failed to get form digest. Response is not in JSON format. Status: " & objXML.Status
-        strDigest = ""
-    End If
-    
-    ' Clean up
-    Set objXML = Nothing
-    GetFormDigest = strDigest
-End Function
