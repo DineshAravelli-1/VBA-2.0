@@ -1,0 +1,58 @@
+Sub AutomateSearchAndPrint()
+    Dim ie As Object
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim nameToSearch As String
+    Dim folderPath As String
+    
+    ' Set the worksheet and range
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Change this to your sheet name
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    folderPath = "C:\Your\Specified\Folder\" ' Change this to your folder path
+    
+    ' Open Internet Explorer
+    Set ie = CreateObject("InternetExplorer.Application")
+    ie.Visible = True
+    ie.navigate "http://owls.bankofamerica.com/home" ' Change to your target URL
+    
+    ' Wait for the page to load
+    Do While ie.Busy Or ie.readyState <> 4
+        DoEvents
+    Loop
+    
+    ' Loop through each name in the Excel sheet
+    For i = 2 To lastRow ' Assuming the first row is headers
+        nameToSearch = ws.Cells(i, 1).Value
+        
+        ' Enter the name in the search field
+        ie.document.getElementById("SearchFieldID").Value = nameToSearch ' Change to the actual ID of the search field
+        ie.document.getElementById("SearchButtonID").Click ' Change to the actual ID of the search button
+        
+        ' Wait for the search results to load
+        Do While ie.Busy Or ie.readyState <> 4
+            DoEvents
+        Loop
+        
+        ' Send Ctrl + P to print
+        Application.SendKeys "^p", True
+        
+        ' Wait for the print dialog to open
+        Application.Wait Now + TimeValue("00:00:02")
+        
+        ' Set print options (this may vary depending on the print dialog and printer settings)
+        ' The following SendKeys sequence assumes a standard print dialog where you can tab through options
+        Application.SendKeys "%l", True ' Alt + L for landscape
+        Application.SendKeys "{TAB}{TAB}{ENTER}", True ' Navigate to header/footer settings and set them
+        
+        ' Enter the file name and save
+        Application.SendKeys folderPath & nameToSearch & ".pdf" & "{ENTER}", True
+        
+        ' Wait for the print job to finish
+        Application.Wait Now + TimeValue("00:00:05")
+    Next i
+    
+    ' Close Internet Explorer
+    ie.Quit
+    Set ie = Nothing
+End Sub
