@@ -6,24 +6,27 @@ Sub UploadDataToSharePoint()
     Dim formDigestValue As String
     Dim ws As Worksheet
 
+    On Error GoTo ErrorHandler
+
     Set xml = CreateObject("MSXML2.ServerXMLHTTP.6.0")
     Set ws = ThisWorkbook.Sheets("Sheet1")  ' Ensure the sheet name matches your Excel sheet name
 
     url = "https://sharepoint3.bankofamerica.com/sites/GBS_GCAAO_Onboarding/F_O_Give_Up_agreement/_api/web/lists/getbytitle('example')/items"
     formDigestValue = GetFormDigest()
+    If formDigestValue = "" Then Exit Sub
 
     For i = 2 To ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
         jsonBody = "{ '__metadata': { 'type': 'SP.Data.ExampleListItem' }, " & _
                    "'Title': '" & ws.Cells(i, 1).Value & "', " & _
                    "'NAME': '" & ws.Cells(i, 2).Value & "', " & _
                    "'AGE': " & ws.Cells(i, 3).Value & "}"
-
+        
         With xml
             .Open "POST", url, False
             .SetRequestHeader "Content-Type", "application/json;odata=verbose"
             .SetRequestHeader "Accept", "application/json;odata=verbose"
             .SetRequestHeader "X-RequestDigest", formDigestValue
-            .SetTimeouts 5000, 60000, 60000, 60000  ' Increase the timeouts
+            .SetTimeouts 10000, 120000, 120000, 120000  ' Further increasing the timeouts
             .Send jsonBody
 
             If .Status <> 201 Then
@@ -34,15 +37,21 @@ Sub UploadDataToSharePoint()
     Next i
 
     MsgBox "Data uploaded successfully!"
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Error " & Err.Number & ": " & Err.Description
 End Sub
 
 Function GetFormDigest() As String
     Dim xml As Object
+    On Error GoTo ErrorHandler
+
     Set xml = CreateObject("MSXML2.ServerXMLHTTP.6.0")
     xml.Open "POST", "https://sharepoint3.bankofamerica.com/sites/GBS_GCAAO_Onboarding/F_O_Give_Up_agreement/_api/contextinfo", False
     xml.SetRequestHeader "Content-Type", "application/json;odata=verbose"
     xml.SetRequestHeader "Accept", "application/json;odata=verbose"
-    xml.SetTimeouts 5000, 60000, 60000, 60000  ' Increase the timeouts
+    xml.SetTimeouts 10000, 120000, 120000, 120000  ' Further increasing the timeouts
     xml.Send
 
     If xml.Status = 200 Then
@@ -51,4 +60,9 @@ Function GetFormDigest() As String
         MsgBox "Failed to get Form Digest: " & xml.Status & " - " & xml.statusText
         GetFormDigest = ""
     End If
+    Exit Function
+
+ErrorHandler:
+    MsgBox "Error " & Err.Number & ": " & Err.Description
+    GetFormDigest = ""
 End Function
