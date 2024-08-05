@@ -24,19 +24,12 @@ Sub WriteListToSharePoint()
     ' Loop through each column and build JSON data
     jsonData = "{" & """__metadata"": {""type"": ""SP.Data.Work_TrackerListItem""},"
     For i = 1 To colCount
-        Debug.Print "Column Header: " & ws.Cells(1, i).Value ' Print the field name for debugging
         jsonData = jsonData & """" & ws.Cells(1, i).Value & """: """ & ws.Cells(2, i).Value & """"
         If i <> colCount Then
             jsonData = jsonData & ", "
         End If
     Next i
     jsonData = jsonData & "}"
-
-    ' Print the JSON data for debugging
-    Debug.Print "JSON Data: " & jsonData
-
-    ' Print the URL being used
-    Debug.Print "URL: " & SharePointURL
 
     ' Prepare the HTTP request
     objXML.Open "POST", SharePointURL, False
@@ -48,10 +41,8 @@ Sub WriteListToSharePoint()
     ' Check the response
     responseText = objXML.responseText
     If objXML.Status = 201 Then
-        Debug.Print "Item uploaded successfully!"
         MsgBox "Item uploaded successfully!"
     Else
-        Debug.Print "Upload failed. Status: " & objXML.Status & "; Response: " & responseText
         MsgBox "Upload failed. Status: " & objXML.Status & "; Response: " & responseText
     End If
 
@@ -78,7 +69,7 @@ Function GetFormDigest(siteURL As String) As String
         Set jsonResponse = JsonConverter.ParseJson(objXML.responseText)
         strDigest = jsonResponse("d")("GetContextWebInformation")("FormDigestValue")
     Else
-        MsgBox "Failed to get form digest. Response is not in JSON format. Status: " & objXML.Status
+        MsgBox "Failed to get form digest. Status: " & objXML.Status
         strDigest = ""
     End If
 
