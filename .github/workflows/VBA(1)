@@ -9,7 +9,7 @@ Sub WriteListToSharePoint()
     Dim colCount As Integer
 
     ' Initialize variables
-    SharePointURL = "http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding/F_O_Give_Up_agreement/_api/web/lists/getbytitle('Work_Tracker')/items"
+    SharePointURL = "http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding/Upload_View/_api/web/lists/getbytitle('Work_Tracker')/items"
     Set ws = ThisWorkbook.Sheets("UploadData")
 
     ' Get form digest value
@@ -24,6 +24,7 @@ Sub WriteListToSharePoint()
     ' Loop through each column and build JSON data
     jsonData = "{" & """__metadata"": {""type"": ""SP.Data.Work_TrackerListItem""},"
     For i = 1 To colCount
+        Debug.Print "Column Header: " & ws.Cells(1, i).Value ' Print the field name for debugging
         jsonData = jsonData & """" & ws.Cells(1, i).Value & """: """ & ws.Cells(2, i).Value & """"
         If i <> colCount Then
             jsonData = jsonData & ", "
@@ -54,3 +55,31 @@ Sub WriteListToSharePoint()
     ' Clean up
     Set objXML = Nothing
 End Sub
+
+Function GetFormDigest(siteURL As String) As String
+    Dim objXML As MSXML2.XMLHTTP60
+    Dim jsonResponse As Object
+    Dim strDigest As String
+
+    ' Create XMLHTTP object
+    Set objXML = New MSXML2.XMLHTTP60
+
+    ' Prepare the HTTP request to get the form digest value
+    objXML.Open "POST", siteURL & "/_api/contextinfo", False
+    objXML.setRequestHeader "Accept", "application/json;odata=verbose"
+    objXML.setRequestHeader "Content-Type", "application/json;odata=verbose"
+    objXML.send
+
+    ' Check if the response is in JSON format and parse it
+    If objXML.Status = 200 Then
+        Set jsonResponse = JsonConverter.ParseJson(objXML.responseText)
+        strDigest = jsonResponse("d")("GetContextWebInformation")("FormDigestValue")
+    Else
+        MsgBox "Failed to get form digest. Response is not in JSON format. Status: " & objXML.Status
+        strDigest = ""
+    End If
+
+    ' Clean up
+    Set objXML = Nothing
+    GetFormDigest = strDigest
+End Function
