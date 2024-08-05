@@ -3,32 +3,37 @@ Sub UploadDataToSharePoint()
     Dim url As String
     Dim i As Long
     Dim jsonBody As String
+    Dim formDigestValue As String
 
     ' Create an XMLHTTP object
-    Set xml = CreateObject("MSXML2.XMLHTTP.6.0")
+    Set xml = CreateObject("MSXML2.ServerXMLHTTP.6.0")
 
     ' SharePoint REST API URL to your list
-    url = "https://yoursite.sharepoint.com/_api/web/lists/getbytitle('Your List Name')/items"
+    url = "https://sharepoint3.bankofamerica.com/sites/GBS_GCAAO_Onboarding/F_O_Give_Up_agreement/_api/web/lists/getbytitle('example')/items"
+
+    ' Get form digest value
+    formDigestValue = GetFormDigest()
 
     ' Loop through each row in Excel starting from row 2
     For i = 2 To Sheet1.Cells(Rows.Count, 1).End(xlUp).Row
         ' Prepare JSON body for the HTTP POST request
-        jsonBody = "{ '__metadata': { 'type': 'SP.Data.YourListNameListItem' }, " & _
+        jsonBody = "{ '__metadata': { 'type': 'SP.Data.ExampleListItem' }, " & _
                    "'Title': '" & Sheet1.Cells(i, 1).Value & "', " & _
-                   "'ColumnName': '" & Sheet1.Cells(i, 2).Value & "'}"
+                   "'NAME': '" & Sheet1.Cells(i, 2).Value & "', " & _
+                   "'AGE': " & Sheet1.Cells(i, 3).Value & "}"
 
         ' Send a POST request to SharePoint
         With xml
             .Open "POST", url, False
             .SetRequestHeader "Content-Type", "application/json;odata=verbose"
             .SetRequestHeader "Accept", "application/json;odata=verbose"
-            .SetRequestHeader "X-RequestDigest", GetFormDigest()
+            .SetRequestHeader "X-RequestDigest", formDigestValue
             .Send jsonBody
         End With
 
         ' Check response
         If xml.Status <> 201 Then
-            MsgBox "Error: " & xml.Status & " - " & xml.statusText
+            MsgBox "Error: " & xml.Status & " - " & xml.statusText & vbCrLf & "Response: " & xml.responseText
             Exit Sub
         End If
     Next i
@@ -40,8 +45,8 @@ Function GetFormDigest() As String
     Dim xml As Object
     Dim url As String
 
-    Set xml = CreateObject("MSXML2.XMLHTTP.6.0")
-    url = "https://yoursite.sharepoint.com/_api/contextinfo"
+    Set xml = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    url = "https://sharepoint3.bankofamerica.com/sites/GBS_GCAAO_Onboarding/F_O_Give_Up_agreement/_api/contextinfo"
     
     With xml
         .Open "POST", url, False
