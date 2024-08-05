@@ -9,7 +9,7 @@ Sub WriteListToSharePoint()
     Dim colCount As Integer
 
     ' Initialize variables
-    SharePointURL = "http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding/Upload_View/_api/web/lists/getbytitle('Work_Tracker')/items"
+    SharePointURL = "http://sharepoint3.bankofamerica.com/sites/GBS_GCAOO_AML_Onboarding/_api/web/lists/getbytitle('Work_Tracker')/items"
     Set ws = ThisWorkbook.Sheets("UploadData")
 
     ' Get form digest value
@@ -34,6 +34,9 @@ Sub WriteListToSharePoint()
 
     ' Print the JSON data for debugging
     Debug.Print "JSON Data: " & jsonData
+
+    ' Print the URL being used
+    Debug.Print "URL: " & SharePointURL
 
     ' Prepare the HTTP request
     objXML.Open "POST", SharePointURL, False
