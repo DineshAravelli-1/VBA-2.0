@@ -1,30 +1,59 @@
 Sub UploadDataToSharePoint()
-    Dim ctx As Object
-    Dim list As Object
-    Dim listItemInfo As Object
-    Dim listItem As Object
+    Dim xml As Object
+    Dim url As String
     Dim i As Long
+    Dim jsonBody As String
 
-    ' Create context and authenticate
-    Set ctx = CreateObject("ScriptControl")
-    ctx.Language = "JScript"
-    ctx.AddCode "function getAuth(url) {var auth = new SP.ClientContext(url); return auth;}"
+    ' Create an XMLHTTP object
+    Set xml = CreateObject("MSXML2.XMLHTTP.6.0")
 
-    ' Update with your SharePoint site URL
-    Set ctx = ctx.Run("getAuth", "https://yoursite.sharepoint.com/")
-    
-    ' Get the SharePoint list
-    Set list = ctx.Web.Lists.GetByTitle("Your List Name")
+    ' SharePoint REST API URL to your list
+    url = "https://yoursite.sharepoint.com/_api/web/lists/getbytitle('Your List Name')/items"
 
-    ' Add items from Excel to SharePoint List
+    ' Loop through each row in Excel starting from row 2
     For i = 2 To Sheet1.Cells(Rows.Count, 1).End(xlUp).Row
-        Set listItemInfo = SP.ListItemCreationInformation
-        Set listItem = list.AddItem(listItemInfo)
-        listItem("Title") = Sheet1.Cells(i, 1).Value
-        listItem("ColumnName") = Sheet1.Cells(i, 2).Value
-        listItem.Update()
-        ctx.ExecuteQuery()
+        ' Prepare JSON body for the HTTP POST request
+        jsonBody = "{ '__metadata': { 'type': 'SP.Data.YourListNameListItem' }, " & _
+                   "'Title': '" & Sheet1.Cells(i, 1).Value & "', " & _
+                   "'ColumnName': '" & Sheet1.Cells(i, 2).Value & "'}"
+
+        ' Send a POST request to SharePoint
+        With xml
+            .Open "POST", url, False
+            .SetRequestHeader "Content-Type", "application/json;odata=verbose"
+            .SetRequestHeader "Accept", "application/json;odata=verbose"
+            .SetRequestHeader "X-RequestDigest", GetFormDigest()
+            .Send jsonBody
+        End With
+
+        ' Check response
+        If xml.Status <> 201 Then
+            MsgBox "Error: " & xml.Status & " - " & xml.statusText
+            Exit Sub
+        End If
     Next i
 
     MsgBox "Data uploaded successfully!"
 End Sub
+
+Function GetFormDigest() As String
+    Dim xml As Object
+    Dim url As String
+
+    Set xml = CreateObject("MSXML2.XMLHTTP.6.0")
+    url = "https://yoursite.sharepoint.com/_api/contextinfo"
+    
+    With xml
+        .Open "POST", url, False
+        .SetRequestHeader "Content-Type", "application/json;odata=verbose"
+        .SetRequestHeader "Accept", "application/json;odata=verbose"
+        .Send
+    End With
+    
+    If xml.Status = 200 Then
+        GetFormDigest = Split(Split(xml.responseText, "FormDigestValue"":""")(1), """")(0)
+    Else
+        MsgBox "Failed to get Form Digest: " & xml.Status & " - " & xml.statusText
+        GetFormDigest = ""
+    End If
+End Function
